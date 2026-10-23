@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "Post Vault",
+    "slug": "recall",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "recall",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.recall.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "recall"
+            ]
+          }
+        ]
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.recall.app"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAFAF9"
+      },
+      "package": "com.recall.app",
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_DATA_SYNC"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1C1917",
+          "defaultChannel": "recall-saves"
+        }
+      ],
+      "./plugins/withRecallShare.js",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAFAF9",
+          "image": "./assets/splash-icon.png"
+        }
+      ],
+      "expo-status-bar"
+    ],
+    "extra": {
+      "supportsRTL": false,
+      "eas": {
+        "projectId": "89691fb6-ef17-45e9-9c4d-b9b3d3b65b63"
+      },
+      "EXPO_PUBLIC_API_URL": "http://192.168.29.74:3000",
+      "EXPO_PUBLIC_SUPABASE_URL": "https://xkxhtqylxbczvkviifpv.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreGh0cXlseGJjenZrdmlpZnB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NTkzOTAsImV4cCI6MjEwNjIzNTM5MH0.ExXPXMIttDVEajPca8TK2FhrYUWDrA60UM1f65ZGFKo"
+    },
+    "owner": "mayankgaur.8"
+  }
+}

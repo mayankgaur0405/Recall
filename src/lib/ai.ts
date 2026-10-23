@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import fs from 'fs';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy_api_key' });
+// ── Validate Gemini API key at module load ──
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) {
+  console.warn('[AI] ⚠ GEMINI_API_KEY is not set. AI analysis will fail.');
+}
+
+const ai = new GoogleGenAI({ apiKey: geminiApiKey || '' });
 
 const reelSchema: Schema = {
   type: Type.OBJECT,
@@ -34,35 +40,93 @@ Generate 15-20 diverse search keywords covering synonyms and related terms.
 Be concise in summaries but comprehensive in extracted details.
 If a field is not applicable or not found, leave it empty.`;
 
+/**
+ * Classify Gemini API errors into actionable categories.
+ */
+export function classifyGeminiError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  const lower = message.toLowerCase();
+
+  // API key issues
+  if (lower.includes('api key') || lower.includes('api_key_invalid') || lower.includes('401') || lower.includes('forbidden') || lower.includes('403')) {
+    return new Error(
+      `Gemini API key error: ${message}. Check that GEMINI_API_KEY in .env.local is a valid key from aistudio.google.com.`
+    );
+  }
+
+  // Quota / rate limits
+  if (
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('rate_limit') ||
+    lower.includes('resource exhausted') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('429')
+  ) {
+    return new Error(
+      `Gemini quota exceeded: ${message}. Your API key may have hit its free-tier or billing limit.`
+    );
+  }
+
+  // Network issues
+  if (lower.includes('econnrefused') || lower.includes('enotfound') || lower.includes('timeout') || lower.includes('network')) {
+    return new Error(
+      `Gemini network error: ${message}. Check your internet connection.`
+    );
+  }
+
+  // Content safety
+  if (lower.includes('safety') || lower.includes('blocked') || lower.includes('harm')) {
+    return new Error(
+      `Gemini content safety: The content was blocked by safety filters. ${message}`
+    );
+  }
+
+  return new Error(`Gemini AI error: ${message}`);
+}
+
+/**
+ * Guard: throw early if GEMINI_API_KEY is missing or looks like a placeholder.
+ */
+function ensureApiKeyConfigured(): void {
+  if (!geminiApiKey) {
+    throw new Error(
+      'GEMINI_API_KEY is not configured in .env.local. Get a free API key at https://aistudio.google.com'
+    );
+  }
+}
+
 // ── Analyze a video file using Gemini multimodal ──
 export async function analyzeVideo(videoPath: string, caption?: string | null) {
+  ensureApiKeyConfigured();
   console.log('[AI] Uploading video for multimodal analysis...');
 
-  // Upload the video file to Gemini
-  const uploadResult = await ai.files.upload({
-    file: videoPath,
-    config: { mimeType: 'video/mp4' },
-  });
+  try {
+    // Upload the video file to Gemini
+    const uploadResult = await ai.files.upload({
+      file: videoPath,
+      config: { mimeType: 'video/mp4' },
+    });
 
-  if (!uploadResult.name) throw new Error('Video upload failed');
+    if (!uploadResult.name) throw new Error('Video upload failed');
 
-  // Wait for the video to finish processing
-  let file = await ai.files.get({ name: uploadResult.name });
-  let attempts = 0;
-  while (file.state === 'PROCESSING' && attempts < 30) {
-    await new Promise((r) => setTimeout(r, 2000));
-    file = await ai.files.get({ name: uploadResult.name! });
-    attempts++;
-    console.log(`[AI] Video processing... (attempt ${attempts})`);
-  }
+    // Wait for the video to finish processing
+    let file = await ai.files.get({ name: uploadResult.name });
+    let attempts = 0;
+    while (file.state === 'PROCESSING' && attempts < 30) {
+      await new Promise((r) => setTimeout(r, 2000));
+      file = await ai.files.get({ name: uploadResult.name! });
+      attempts++;
+      console.log(`[AI] Video processing... (attempt ${attempts})`);
+    }
 
-  if (file.state !== 'ACTIVE') {
-    throw new Error(`Video processing failed with state: ${file.state}`);
-  }
+    if (file.state !== 'ACTIVE') {
+      throw new Error(`Video processing failed with state: ${file.state}`);
+    }
 
-  console.log('[AI] Video processed. Running multimodal analysis...');
+    console.log('[AI] Video processed. Running multimodal analysis...');
 
-  const userPrompt = `Analyze this Instagram Reel video thoroughly.
+    const userPrompt = `Analyze this Instagram Reel video thoroughly.
 Listen to everything said in the audio/speech.
 Look at everything shown visually.
 ${caption ? `The caption posted with this Reel is: "${caption}"` : ''}
@@ -70,72 +134,89 @@ ${caption ? `The caption posted with this Reel is: "${caption}"` : ''}
 Extract all useful information: what is being discussed, any products/places/people mentioned, instructions given, recommendations made, prices quoted, etc.
 Return structured JSON.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { fileData: { fileUri: file.uri!, mimeType: 'video/mp4' } },
-          { text: userPrompt },
-        ],
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { fileData: { fileUri: file.uri!, mimeType: 'video/mp4' } },
+            { text: userPrompt },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: 'application/json',
+        responseSchema: reelSchema,
+        temperature: 0.2,
       },
-    ],
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: 'application/json',
-      responseSchema: reelSchema,
-      temperature: 0.2,
-    },
-  });
+    });
 
-  // Clean up the uploaded file from Google servers
-  try {
-    await ai.files.delete({ name: uploadResult.name! });
-  } catch (_) {
-    // ignore cleanup errors
+    // Clean up the uploaded file from Google servers
+    try {
+      await ai.files.delete({ name: uploadResult.name! });
+    } catch (_) {
+      // ignore cleanup errors
+    }
+
+    if (!response.text) throw new Error('Failed to generate content from video');
+    return JSON.parse(response.text);
+  } catch (err: unknown) {
+    throw classifyGeminiError(err);
   }
-
-  if (!response.text) throw new Error('Failed to generate content from video');
-  return JSON.parse(response.text);
 }
 
 // ── Analyze text content only (caption / manual input) ──
 export async function analyzeContent(content: string) {
+  ensureApiKeyConfigured();
+
   const prompt = `${systemPrompt}
 
 Content to analyze:
 ${content}`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: reelSchema,
-      temperature: 0.2,
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: reelSchema,
+        temperature: 0.2,
+      },
+    });
 
-  if (!response.text) throw new Error('Failed to generate content');
-  return JSON.parse(response.text);
+    if (!response.text) throw new Error('Failed to generate content');
+    return JSON.parse(response.text);
+  } catch (err: unknown) {
+    throw classifyGeminiError(err);
+  }
 }
 
 // ── Generate embedding for semantic search ──
 export async function generateEmbedding(text: string) {
-  const response = await ai.models.embedContent({
-    model: 'gemini-embedding-2',
-    contents: text,
-    config: {
-      outputDimensionality: 768,
-    },
-  });
+  ensureApiKeyConfigured();
 
-  return response.embeddings?.[0]?.values;
+  try {
+    const response = await ai.models.embedContent({
+      model: 'gemini-embedding-2',
+      contents: text,
+      config: {
+        outputDimensionality: 768,
+      },
+    });
+
+    return response.embeddings?.[0]?.values;
+  } catch (err: unknown) {
+    throw classifyGeminiError(err);
+  }
 }
 
 // ── Answer a search question using saved context ──
 export async function answerQuestion(query: string, context: any[]) {
+  ensureApiKeyConfigured();
+
   const contextText = context
     .map(
       (item) => `
@@ -147,7 +228,7 @@ Date Saved: ${new Date(item.created_at).toLocaleDateString()}`
     )
     .join('\n---\n');
 
-  const prompt = `You are a helpful AI assistant for "Recall", answering a question using ONLY the following saved content belonging to this user.
+  const prompt = `You are a helpful AI assistant for "Post Vault", answering a question using ONLY the following saved content belonging to this user.
 Do not use outside knowledge.
 If the answer is not present in the provided context, say you could not find it in their saved items.
 Mention the relevant saved item, provide a concise answer, and always include its original source URL.
@@ -157,13 +238,17 @@ User's Question: ${query}
 Saved Content Context:
 ${contextText}`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0.3,
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.3,
+      },
+    });
 
-  return response.text;
+    return response.text;
+  } catch (err: unknown) {
+    throw classifyGeminiError(err);
+  }
 }

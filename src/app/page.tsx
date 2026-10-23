@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Loader2, AlertCircle, Check } from 'lucide-react'
+import { Plus, Search, Loader2, AlertCircle, Check, Library } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import toast from 'react-hot-toast'
 import ReelCard from '@/components/ReelCard'
@@ -15,7 +15,7 @@ const PROCESSING_STEPS = [
   'Analyzing audio & visuals with AI',
   'Generating summary & extracting info',
   'Creating searchable embeddings',
-  'Saving to Recall',
+  'Saving to Post Vault',
 ]
 
 export default function Home() {
@@ -60,7 +60,7 @@ export default function Home() {
     e.preventDefault()
 
     const isManualMode = needsFallback
-    if (!isManualMode && !url.includes('instagram.com/reel/')) {
+    if (!isManualMode && !url.includes('instagram.com/') && !url.includes('instagr.am/')) {
       toast.error('Please enter a valid Instagram Reel URL')
       return
     }
@@ -96,7 +96,7 @@ export default function Home() {
       }
 
       setCurrentStep(PROCESSING_STEPS.length - 1)
-      toast.success('Reel saved to your library!')
+      toast.success(data.duplicate ? 'Already in your library' : 'Reel saved to your library!')
       setUrl('')
       setManualContent('')
       setNeedsFallback(false)
@@ -119,7 +119,7 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <div className="text-center mb-10 w-full">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Recall</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-2">Post Vault</h1>
         <p className="text-stone-500">Your memory for the internet.</p>
       </div>
 
@@ -212,6 +212,20 @@ export default function Home() {
       </div>
 
       <div className="w-full h-px bg-stone-200 my-4"></div>
+
+      {/* ── View Saved Reels Action Button ── */}
+      <div className="w-full my-4">
+        <button
+          onClick={() => router.push('/library')}
+          className="w-full py-4 px-6 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-semibold flex items-center justify-between shadow-sm transition-all hover:scale-[1.005] active:scale-[0.995]"
+        >
+          <span className="flex items-center gap-2.5">
+            <Library size={20} />
+            View Saved Reels
+          </span>
+          <span className="text-stone-300 font-bold">→</span>
+        </button>
+      </div>
 
       {/* ── Search ── */}
       <div className="w-full my-10">

@@ -77,7 +77,7 @@ export default function SettingsPage() {
               className="text-stone-600 font-medium hover:text-stone-900 transition-colors flex items-center gap-2 text-sm"
             >
               <LogOut size={16} />
-              Log out of Recall
+              Log out of Post Vault
             </button>
           </div>
         </section>

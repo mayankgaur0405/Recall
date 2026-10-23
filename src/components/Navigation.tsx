@@ -31,13 +31,13 @@ export default function Navigation() {
     router.push('/login')
   }
 
-  if (!user && pathname === '/login') return null;
+  if (pathname === '/login') return null;
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-stone-50/80 backdrop-blur-md z-50 border-b border-stone-200">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="font-semibold text-lg tracking-tight">
-          Recall
+          Post Vault
         </Link>
         
         {user && (

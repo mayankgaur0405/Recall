@@ -11,7 +11,7 @@ export default async function LoginPage({
     <div className="flex-1 flex flex-col items-center justify-center -mt-16">
       <div className="w-full max-w-sm p-8 bg-white border border-stone-200 rounded-2xl shadow-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold mb-2">Recall</h1>
+          <h1 className="text-2xl font-semibold mb-2">Post Vault</h1>
           <p className="text-stone-500 text-sm">Your memory for the internet.</p>
         </div>
         
