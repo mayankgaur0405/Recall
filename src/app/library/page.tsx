@@ -13,7 +13,7 @@ function safeList(val: unknown): string[] {
     try {
       const parsed = JSON.parse(val)
       if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean)
-    } catch {}
+    } catch { }
     return val.split(',').map((s) => s.trim()).filter(Boolean)
   }
   return []

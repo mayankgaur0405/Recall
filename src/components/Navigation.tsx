@@ -18,11 +18,11 @@ export default function Navigation() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
     })
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
     })
-    
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -39,34 +39,34 @@ export default function Navigation() {
         <Link href="/" className="font-semibold text-lg tracking-tight">
           Post Vault
         </Link>
-        
+
         {user && (
           <div className="flex items-center gap-6 text-sm font-medium text-stone-600">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className={`flex items-center gap-2 hover:text-stone-900 transition-colors ${pathname === '/' ? 'text-stone-900' : ''}`}
             >
               <Home size={18} />
               <span className="hidden sm:inline">Home</span>
             </Link>
-            <Link 
-              href="/search" 
+            <Link
+              href="/search"
               className={`flex items-center gap-2 hover:text-stone-900 transition-colors ${pathname === '/search' ? 'text-stone-900' : ''}`}
             >
               <Search size={18} />
               <span className="hidden sm:inline">Search</span>
             </Link>
-            <Link 
-              href="/library" 
+            <Link
+              href="/library"
               className={`flex items-center gap-2 hover:text-stone-900 transition-colors ${pathname === '/library' ? 'text-stone-900' : ''}`}
             >
               <Library size={18} />
               <span className="hidden sm:inline">Library</span>
             </Link>
-            
+
             <div className="w-px h-4 bg-stone-300 ml-2" />
-            
-            <button 
+
+            <button
               onClick={handleLogout}
               className="flex items-center gap-2 hover:text-stone-900 transition-colors ml-2"
               title="Logout"

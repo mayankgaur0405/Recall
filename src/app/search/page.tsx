@@ -11,7 +11,7 @@ function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const initialQuery = searchParams.get('q') || ''
-  
+
   const [query, setQuery] = useState(initialQuery)
   const [isSearching, setIsSearching] = useState(false)
   const [results, setResults] = useState<SavedReel[]>([])
@@ -47,7 +47,7 @@ function SearchContent() {
 
       setResults(data.results || [])
       setAiAnswer(data.answer)
-      
+
       // Update URL without reloading
       router.replace(`/search?q=${encodeURIComponent(searchStr)}`)
     } catch (error) {
@@ -76,7 +76,7 @@ function SearchContent() {
             placeholder="Ask anything about your saved reels..."
             className="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent transition-all text-lg"
           />
-          <button 
+          <button
             type="submit"
             disabled={isSearching || !query.trim()}
             className="absolute right-2 top-2 bottom-2 bg-stone-900 text-white px-4 rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50"

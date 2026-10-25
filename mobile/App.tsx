@@ -8,6 +8,7 @@ import AuthScreen from './src/screens/AuthScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import LibraryScreen from './src/screens/LibraryScreen'
 import SettingsScreen from './src/screens/SettingsScreen'
+import ReelsBrowserScreen from './src/screens/ReelsBrowserScreen'
 import { restoreSession, supabase } from './src/lib/auth'
 import { ingestReel } from './src/lib/api'
 import { consumePendingShareUrl, stashPendingShareUrl } from './src/lib/sessionBridge'
@@ -155,6 +156,7 @@ export default function App() {
               lastShareMessage={lastShareMessage}
               pendingUrl={pendingUrl}
               onOpenLibrary={() => navigation.navigate('Library')}
+              onOpenReelsBrowser={() => navigation.navigate('ReelsBrowser')}
               onRetryPending={async () => {
                 if (session && pendingUrl) {
                   await flushPending(session, pendingUrl)
@@ -167,7 +169,41 @@ export default function App() {
             />
           )}
         </Stack.Screen>
-        <Stack.Screen name="Library" options={{ title: 'Saved Reels' }} component={LibraryScreen} />
+        <Stack.Screen
+          name="Library"
+          options={({ navigation }) => ({
+            title: 'Saved Reels',
+            headerRight: () => (
+              <Pressable
+                onPress={() => navigation.navigate('ReelsBrowser')}
+                hitSlop={10}
+                style={{ paddingVertical: 4, paddingHorizontal: 4 }}
+              >
+                <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>
+                  Browse 
+                </Text>
+              </Pressable>
+            ),
+          })}
+          component={LibraryScreen}
+        />
+        <Stack.Screen
+          name="ReelsBrowser"
+          options={{
+            headerShown: false,
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+          }}
+        >
+          {({ navigation, route }) => (
+            <ReelsBrowserScreen
+              session={session}
+              onOpenLibrary={() => navigation.navigate('Library')}
+              onClose={() => navigation.goBack()}
+              initialUrl={(route.params as { initialUrl?: string } | undefined)?.initialUrl}
+            />
+          )}
+        </Stack.Screen>
         <Stack.Screen name="Settings" options={{ title: 'Settings' }}>
           {() => (
             <SettingsScreen

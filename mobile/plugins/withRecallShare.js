@@ -188,7 +188,7 @@ function withAndroidShareFallback(config) {
         },
         'intent-filter': [
           {
-            $: { 'android:label': 'Recall' },
+            $: { 'android:label': 'Post Vault' },
             action: [{ $: { 'android:name': 'android.intent.action.SEND' } }],
             category: [{ $: { 'android:name': 'android.intent.category.DEFAULT' } }],
             data: [{ $: { 'android:mimeType': 'text/plain' } }],

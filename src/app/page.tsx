@@ -41,7 +41,7 @@ export default function Home() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(6)
-    
+
     if (data && !error) {
       setRecentReels(data as SavedReel[])
     }

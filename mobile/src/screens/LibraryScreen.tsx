@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -18,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { colors, spacing } from '../theme'
 import { supabase } from '../lib/auth'
 import { retryReelAnalysis } from '../lib/api'
+import { Platform } from 'react-native'
 import type { SavedReel } from '../lib/api'
 
 function safeArray(val: unknown): string[] {
@@ -202,6 +204,62 @@ export default function LibraryScreen() {
     }
   }
 
+  async function handleDeleteReel(reelId: string, reelTitle: string | null) {
+    const doDelete = async () => {
+      try {
+        const { error } = await supabase.from('reels').delete().eq('id', reelId)
+        if (error) {
+          Alert.alert('Error', 'Could not remove this Reel. Please try again.')
+          return
+        }
+        setReels((prev) => prev.filter((r) => r.id !== reelId))
+        // Close modal if this reel was open
+        setSelectedReel((curr) => (curr && curr.id === reelId ? null : curr))
+      } catch {
+        Alert.alert('Error', 'Something went wrong. Please try again.')
+      }
+    }
+
+    Alert.alert(
+      'Remove from Vault',
+      `Are you sure you want to remove "${reelTitle || 'this Reel'}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: doDelete },
+      ]
+    )
+  }
+
+  function showCardActions(reel: SavedReel) {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'View Details', 'Open in Instagram', 'Remove from Vault'],
+          destructiveButtonIndex: 3,
+          cancelButtonIndex: 0,
+          title: reel.title || 'Reel Options',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) setSelectedReel(reel)
+          else if (buttonIndex === 2) Linking.openURL(reel.source_url)
+          else if (buttonIndex === 3) handleDeleteReel(reel.id, reel.title)
+        }
+      )
+    } else {
+      // Android fallback using Alert
+      Alert.alert(
+        reel.title || 'Reel Options',
+        undefined,
+        [
+          { text: 'View Details', onPress: () => setSelectedReel(reel) },
+          { text: 'Open in Instagram', onPress: () => Linking.openURL(reel.source_url) },
+          { text: 'Remove from Vault', style: 'destructive', onPress: () => handleDeleteReel(reel.id, reel.title) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      )
+    }
+  }
+
   // Filtered reels based on search query
   const filteredReels = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -350,7 +408,11 @@ export default function LibraryScreen() {
             const showReadMore = hasExtendedContent(item)
 
             return (
-              <View style={styles.card}>
+              <Pressable
+                style={styles.card}
+                onLongPress={() => showCardActions(item)}
+                delayLongPress={400}
+              >
                 <View style={styles.cardMain}>
                   {/* Thumbnail Preview */}
                   {item.thumbnail_url ? (
@@ -384,6 +446,17 @@ export default function LibraryScreen() {
                       {item.summary || 'No summary available.'}
                     </Text>
                   </View>
+
+                  {/* More Options Button */}
+                  <Pressable
+                    onPress={() => showCardActions(item)}
+                    hitSlop={12}
+                    style={styles.moreButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Options for ${item.title || 'Reel'}`}
+                  >
+                    <Text style={styles.moreButtonText}>⋮</Text>
+                  </Pressable>
                 </View>
 
                 {/* Status Row (Pending, Processing, Failed, Partial) */}
@@ -424,7 +497,7 @@ export default function LibraryScreen() {
                     </Pressable>
                   </View>
                 ) : null}
-              </View>
+              </Pressable>
             )
           }}
         />
@@ -488,18 +561,32 @@ export default function LibraryScreen() {
               {/* Title */}
               <Text style={styles.modalTitle}>{selectedReel.title || 'Untitled Reel'}</Text>
 
-              {/* Open on Instagram Action */}
-              <Pressable
-                onPress={() => Linking.openURL(selectedReel.source_url)}
-                style={({ pressed }) => [
-                  styles.openInstagramButton,
-                  pressed && styles.openInstagramButtonPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Open Reel on Instagram"
-              >
-                <Text style={styles.openInstagramButtonText}>View on Instagram ↗</Text>
-              </Pressable>
+              {/* Action Buttons Row */}
+              <View style={styles.modalActionsRow}>
+                <Pressable
+                  onPress={() => Linking.openURL(selectedReel.source_url)}
+                  style={({ pressed }) => [
+                    styles.openInstagramButton,
+                    pressed && styles.openInstagramButtonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open Reel on Instagram"
+                >
+                  <Text style={styles.openInstagramButtonText}>View on Instagram ↗</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleDeleteReel(selectedReel.id, selectedReel.title)}
+                  style={({ pressed }) => [
+                    styles.removeButton,
+                    pressed && styles.removeButtonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove Reel from Vault"
+                >
+                  <Text style={styles.removeButtonText}>Remove from Vault</Text>
+                </Pressable>
+              </View>
 
               {/* Section: Summary */}
               <View style={styles.modalSection}>
@@ -899,7 +986,13 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     marginBottom: 14,
   },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
   openInstagramButton: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -907,7 +1000,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
   },
   openInstagramButtonPressed: {
     backgroundColor: colors.border,
@@ -985,5 +1077,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  moreButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    minWidth: 24,
+  },
+  moreButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.secondary,
+    lineHeight: 20,
+  },
+  removeButton: {
+    flex: 1,
+    backgroundColor: colors.dangerBg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonPressed: {
+    backgroundColor: '#FEE2E2',
+  },
+  removeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.danger,
   },
 })

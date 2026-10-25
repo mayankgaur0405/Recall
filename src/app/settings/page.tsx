@@ -28,9 +28,9 @@ export default function SettingsPage() {
         .from('reels')
         .delete()
         .eq('user_id', user?.id)
-      
+
       if (error) throw error
-      
+
       toast.success('All saved content deleted')
     } catch (error) {
       toast.error('Failed to delete content')
@@ -72,7 +72,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-stone-500 mb-1">Email</label>
               <div className="text-stone-900">{user.email}</div>
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="text-stone-600 font-medium hover:text-stone-900 transition-colors flex items-center gap-2 text-sm"
             >
@@ -94,13 +94,13 @@ export default function SettingsPage() {
             <p className="text-sm text-stone-600 mb-6">
               Your saved content belongs to you. We do not expose private user data, and your saved content is never used to answer other users' questions.
             </p>
-            
+
             <div className="pt-4 border-t border-stone-100">
               <h3 className="text-sm font-medium text-red-600 mb-2">Danger Zone</h3>
               <p className="text-sm text-stone-500 mb-4">
                 Permanently delete all your saved items. This action cannot be undone.
               </p>
-              <button 
+              <button
                 onClick={handleDeleteAll}
                 disabled={isDeleting}
                 className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50"
